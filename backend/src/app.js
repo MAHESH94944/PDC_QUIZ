@@ -47,11 +47,10 @@ if (isProd) {
   app.use(express.static(frontendDist));
 
   // For any non-API GET request, serve index.html so SPA routing works
-  app.get("*", (req, res) => {
-    if (req.path.startsWith("/api")) {
-      // let API 404s fall through / return default 404
-      return res.status(404).json({ message: "API route not found" });
-    }
+  // Use middleware (not app.get with "*") to avoid path-to-regexp errors on Render
+  app.use((req, res, next) => {
+    if (req.method !== "GET") return next();
+    if (req.path.startsWith("/api")) return next();
     res.sendFile(path.join(frontendDist, "index.html"), (err) => {
       if (err) {
         console.error("Error sending index.html:", err);
