@@ -2,18 +2,7 @@ import { useState } from "react";
 import InfoForm from "./components/InfoForm";
 import Quiz from "./components/Quiz";
 import Admin from "./pages/Admin";
-
-// determine API base for local vs hosted usage
-const getApiBase = () => {
-  if (typeof window === "undefined") return "";
-  const host = window.location.hostname;
-  if (host === "localhost" || host === "127.0.0.1")
-    return "http://localhost:5000";
-  if (host === "pdc-quiz.onrender.com") return "https://pdc-quiz.onrender.com";
-  // fallback to same origin (empty) so relative /api/* works
-  return "";
-};
-const API_BASE = getApiBase();
+import API_BASE from "./api"; // <-- new import
 
 const App = () => {
   const [info, setInfo] = useState(null);
@@ -26,7 +15,7 @@ const App = () => {
   const handleSubmit = async (answersArray) => {
     try {
       const payload = { ...info, answers: answersArray };
-      const url = (API_BASE || "") + "/api/students";
+      const url = `${API_BASE}/api/students`; // use single base
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -1,17 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import questions from "../data/questions"; // <-- existing import
-
-// NEW: API base helper for local vs hosted
-const getApiBase = () => {
-  if (typeof window === "undefined") return "";
-  const host = window.location.hostname;
-  if (host === "localhost" || host === "127.0.0.1")
-    return "http://localhost:5000";
-  if (host === "pdc-quiz.onrender.com") return "https://pdc-quiz.onrender.com";
-  return ""; // same-origin fallback
-};
-const API_BASE = getApiBase();
-const prefix = API_BASE || ""; // use prefix + "/api/..." for requests
+import questions from "../data/questions";
+import API_BASE from "../api"; // <-- import single base
 
 export default function Admin() {
   const [password, setPassword] = useState("");
@@ -39,7 +28,7 @@ export default function Admin() {
   const loadList = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${prefix}/api/students`);
+      const res = await fetch(`${API_BASE}/api/students`);
       const data = await res.json();
       setStudents(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -71,7 +60,7 @@ export default function Admin() {
   const loadStudent = async (id) => {
     setLoading(true);
     try {
-      const res = await fetch(`${prefix}/api/students/${id}`);
+      const res = await fetch(`${API_BASE}/api/students/${id}`);
       const data = await res.json();
       if (data && data.answers)
         data.answers.sort(
@@ -162,7 +151,7 @@ export default function Admin() {
     try {
       const details = await Promise.all(
         students.map((s) =>
-          fetch(`${prefix}/api/students/${s._id}`)
+          fetch(`${API_BASE}/api/students/${s._id}`)
             .then((r) => r.json())
             .catch(() => null)
         )
@@ -210,7 +199,7 @@ export default function Admin() {
     try {
       const details = await Promise.all(
         students.map((s) =>
-          fetch(`${prefix}/api/students/${s._id}`)
+          fetch(`${API_BASE}/api/students/${s._id}`)
             .then((r) => r.json())
             .catch(() => null)
         )
@@ -649,3 +638,4 @@ export default function Admin() {
     </div>
   );
 }
+        
