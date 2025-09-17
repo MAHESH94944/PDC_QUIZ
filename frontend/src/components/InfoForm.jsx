@@ -65,6 +65,8 @@ export default function InfoForm({ onNext }) {
       <div className="mb-4">
         <label className="block text-sm text-gray-700 mb-1">Name</label>
         <input
+          name="name"
+          autoComplete="name"
           value={form.name}
           onChange={(e) => handleChange("name", e.target.value)}
           className="w-full p-3 border rounded"
@@ -75,12 +77,16 @@ export default function InfoForm({ onNext }) {
         <label className="block text-sm text-gray-700 mb-1">Email</label>
         <input
           type="email"
+          name="email"
+          autoComplete="email"
+          autoCapitalize="none"
+          placeholder="you@example.com"
           value={form.email}
           onChange={(e) => handleChange("email", e.target.value)}
           className={`w-full p-3 border rounded ${
             errors.email ? "border-red-400" : ""
           }`}
-          placeholder="you@example.com"
+          required
         />
         {errors.email ? (
           <div className="text-red-600 text-sm mt-1">{errors.email}</div>
@@ -92,6 +98,12 @@ export default function InfoForm({ onNext }) {
           Contact (10 digits)
         </label>
         <input
+          type="tel"
+          name="contact"
+          autoComplete="tel"
+          inputMode="numeric"
+          pattern="\d{10}"
+          placeholder="9876543210"
           value={form.contact}
           onChange={(e) =>
             handleChange("contact", e.target.value.replace(/\D/g, ""))
@@ -100,7 +112,7 @@ export default function InfoForm({ onNext }) {
           className={`w-full p-3 border rounded ${
             errors.contact ? "border-red-400" : ""
           }`}
-          placeholder="9876543210"
+          required
         />
         {errors.contact ? (
           <div className="text-red-600 text-sm mt-1">{errors.contact}</div>

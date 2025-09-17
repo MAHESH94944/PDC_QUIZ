@@ -70,20 +70,22 @@ const App = () => {
           <Quiz onSubmit={handleSubmit} onBack={() => setInfo(null)} />
         )}
         {submitted && (
-          <div className="max-w-xl mx-auto p-6 bg-white rounded-lg shadow">
-            <h3 className="text-lg font-bold mb-2 text-green-700">
-              Thank you — submission saved.
-            </h3>
-            <div className="text-sm text-gray-600">
-              Student ID: {submitted._id}
+          <>
+            <div className="max-w-xl mx-auto p-6 bg-white rounded-lg shadow">
+              <h3 className="text-lg font-bold mb-2 text-green-700">
+                Thank you — submission saved.
+              </h3>
+              <div className="text-sm text-gray-600">
+                Student ID: {submitted._id}
+              </div>
+              <button
+                onClick={() => setSubmitted(null)}
+                className="mt-4 px-3 py-1 border rounded bg-indigo-600 text-white"
+              >
+                New submission
+              </button>
             </div>
-            <button
-              onClick={() => setSubmitted(null)}
-              className="mt-4 px-3 py-1 border rounded bg-indigo-600 text-white"
-            >
-              New submission
-            </button>
-          </div>
+          </>
         )}
       </main>
     </div>
