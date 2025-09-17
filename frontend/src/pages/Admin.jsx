@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import questions from "../data/questions";
-import API_BASE from "../api"; // <-- import single base
+import API_BASE from "../api"; // ensure API base is used for fetches
 
 export default function Admin() {
   const [password, setPassword] = useState("");
@@ -25,10 +25,14 @@ export default function Admin() {
     setSelected(null);
   }, [authed]);
 
+  // use API_BASE prefix for fetch calls
+  const prefix = API_BASE || "";
+
+  // load list (uses campus now returned by backend)
   const loadList = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/students`);
+      const res = await fetch(`${prefix}/api/students`);
       const data = await res.json();
       setStudents(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -60,7 +64,7 @@ export default function Admin() {
   const loadStudent = async (id) => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/students/${id}`);
+      const res = await fetch(`${prefix}/api/students/${id}`);
       const data = await res.json();
       if (data && data.answers)
         data.answers.sort(
@@ -98,11 +102,11 @@ export default function Admin() {
     URL.revokeObjectURL(url);
   };
 
+  // CSV builder: use full questions[] for headers (Q1 - question text)
   const makeCSV = (fullStudents) => {
-    const maxQ = Math.max(
-      0,
-      ...fullStudents.map((s) => (s.answers ? s.answers.length : 0))
-    );
+    // use questions array length for consistent columns
+    const qCount = questions.length;
+    const qHeaders = questions.map((q, i) => `${i + 1} - ${q.text}`);
     const headers = [
       "id",
       "name",
@@ -113,19 +117,31 @@ export default function Admin() {
       "campus",
       "branch",
       "createdAt",
-      ...Array.from({ length: maxQ }, (_, i) => `Q${i + 1}`),
+      ...qHeaders,
     ];
+    const headerLine = headers.map((h) => JSON.stringify(h)).join(",");
     const rows = fullStudents.map((s) => {
       const qmap = {};
-      (s.answers || []).forEach((a, idx) => {
-        const i = a.questionIndex ? a.questionIndex - 1 : idx;
-        qmap[i] = a.answer || "";
+      (s.answers || []).forEach((a) => {
+        // place by questionIndex (preferred) or match by questionId -> find index
+        let idx = null;
+        if (a.questionIndex) idx = a.questionIndex - 1;
+        else {
+          const qi = questions.findIndex((qq) => qq.id === a.questionId);
+          if (qi >= 0) idx = qi;
+        }
+        if (idx === null || idx === undefined || idx < 0 || idx >= qCount) {
+          // skip or map to next available (but keep it simple)
+        } else {
+          qmap[idx] = a.answer || "";
+        }
       });
-      const qcols = Array.from({ length: maxQ }, (_, i) =>
+
+      const qcols = Array.from({ length: qCount }, (_, i) =>
         JSON.stringify(qmap[i] || "")
       );
       return [
-        s._id,
+        JSON.stringify(s._id || ""),
         JSON.stringify(s.name || ""),
         JSON.stringify(s.email || ""),
         JSON.stringify(s.contact || ""),
@@ -137,7 +153,8 @@ export default function Admin() {
         ...qcols,
       ].join(",");
     });
-    return [headers.join(","), ...rows].join("\n");
+
+    return [headerLine, ...rows].join("\n");
   };
 
   const exportAllCSV = async () => {
@@ -149,16 +166,44 @@ export default function Admin() {
       return;
     setLoading(true);
     try {
-      const details = await Promise.all(
-        students.map((s) =>
-          fetch(`${API_BASE}/api/students/${s._id}`)
-            .then((r) => r.json())
-            .catch(() => null)
-        )
+      const details = await loadAllDetails();
+      const csv = makeCSV(details);
+      download(`students_all_${new Date().toISOString()}.csv`, csv);
+    } catch (err) {
+      console.error(err);
+      alert("Export failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // NEW: export only the selected campus (use campusFilter)
+  const exportPerCampusCSVs = async () => {
+    if (!campusFilter) {
+      alert("Please select a campus from the left filter before exporting.");
+      return;
+    }
+    if (
+      !confirm(
+        `Export CSV for campus "${campusFilter}"? This will fetch full student details.`
+      )
+    )
+      return;
+
+    setLoading(true);
+    try {
+      const details = await loadAllDetails();
+      const studentsForCampus = details.filter(
+        (s) => (s.campus || "") === campusFilter
       );
-      const valid = details.filter(Boolean);
-      const csv = makeCSV(valid);
-      download(`students_${new Date().toISOString()}.csv`, csv);
+      if (!studentsForCampus.length) {
+        alert("No students found for the selected campus.");
+        return;
+      }
+      const csv = makeCSV(studentsForCampus);
+      const safeName =
+        campusFilter.replace(/[^a-z0-9_\-]/gi, "_").slice(0, 50) || "campus";
+      download(`students_${safeName}_${new Date().toISOString()}.csv`, csv);
     } catch (err) {
       console.error(err);
       alert("Export failed");
@@ -199,7 +244,7 @@ export default function Admin() {
     try {
       const details = await Promise.all(
         students.map((s) =>
-          fetch(`${API_BASE}/api/students/${s._id}`)
+          fetch(`${prefix}/api/students/${s._id}`)
             .then((r) => r.json())
             .catch(() => null)
         )
@@ -327,6 +372,12 @@ export default function Admin() {
               className="px-3 py-1 rounded bg-emerald-600 text-white text-sm shadow"
             >
               Export ALL CSV
+            </button>
+            <button
+              onClick={exportPerCampusCSVs}
+              className="px-3 py-1 rounded bg-emerald-500 text-white text-sm shadow"
+            >
+              Export per-campus CSVs
             </button>
             <button
               onClick={handleShowStats}
@@ -638,4 +689,3 @@ export default function Admin() {
     </div>
   );
 }
-        

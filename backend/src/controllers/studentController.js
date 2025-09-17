@@ -28,9 +28,11 @@ exports.createStudent = async (req, res) => {
 
 exports.getStudents = async (req, res) => {
   try {
-    const students = await Student.find({}, "name email createdAt").sort({
-      createdAt: -1,
-    });
+    // include campus, branch, contact and createdAt for admin list view
+    const students = await Student.find(
+      {},
+      "name email contact hometown gender campus branch createdAt"
+    ).sort({ createdAt: -1 });
     res.json(students);
   } catch (err) {
     console.error(err);
