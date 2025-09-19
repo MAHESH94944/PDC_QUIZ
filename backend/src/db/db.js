@@ -1,9 +1,29 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const connectDB = ()=>{
-    mongoose.connect(process.env.MONGO_URI)
-    .then(()=>console.log("MongoDB connected"))
-    .catch((err)=>console.log(err));
-}
+const connectDB = async () => {
+  const uri = process.env.MONGO_URI;
+  if (!uri) {
+    console.warn("MONGO_URI not set — skipping DB connect");
+    return;
+  }
+
+  const poolSize = parseInt(process.env.MONGO_POOL_SIZE || "20", 10);
+
+  try {
+    await mongoose.connect(uri, {
+      // increase pool size to allow more concurrent DB connections
+      maxPoolSize: poolSize,
+      // fail fast if DB not available
+      serverSelectionTimeoutMS: 5000,
+      // socket timeout
+      socketTimeoutMS: 45000,
+      // recommended flags handled by mongoose defaults for current versions
+    });
+    console.log("MongoDB connected (poolSize=" + poolSize + ")");
+  } catch (err) {
+    console.error("MongoDB connection error:", err);
+    // don't crash the process here — app can still run and retry later
+  }
+};
 
 module.exports = connectDB;
