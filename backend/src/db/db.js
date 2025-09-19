@@ -15,15 +15,4 @@ const connectDB = async () => {
   });
   console.log("MongoDB connected (poolSize=" + poolSize + ")");
 };
-
-module.exports = connectDB;
-      // recommended flags handled by mongoose defaults for current versions
-    });
-    console.log("MongoDB connected (poolSize=" + poolSize + ")");
-  } catch (err) {
-    console.error("MongoDB connection error:", err);
-    // don't crash the process here — app can still run and retry later
-  }
-};
-
 module.exports = connectDB;
