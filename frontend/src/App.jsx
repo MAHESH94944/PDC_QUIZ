@@ -8,25 +8,64 @@ const App = () => {
   const [info, setInfo] = useState(null);
   const [submitted, setSubmitted] = useState(null);
 
+  // NEW: submitting state for overlay
+  const [submitting, setSubmitting] = useState(false);
+
   const handleNext = (form) => {
     setInfo(form);
   };
 
+  const waitForHealthy = async (timeoutMs = 120000) => {
+    const start = Date.now();
+    let attempt = 0;
+    const healthUrl = `${API_BASE}/health`;
+    while (Date.now() - start < timeoutMs) {
+      attempt++;
+      try {
+        const r = await fetch(healthUrl, { cache: "no-store" });
+        if (r.ok) return true;
+        // if 429 or other non-ok, fall through to wait
+      } catch (e) {
+        // network error — treat as not ready
+      }
+      // exponential backoff capped at 10s
+      const delay = Math.min(2000 * attempt, 10000);
+      await new Promise((res) => setTimeout(res, delay));
+    }
+    return false;
+  };
+
   const handleSubmit = async (answersArray) => {
+    setSubmitting(true);
     try {
+      const healthy = await waitForHealthy(120000); // wait up to 2 minutes
+      if (!healthy) {
+        alert("Server is busy. Please try again later.");
+        setSubmitting(false);
+        return;
+      }
+
       const payload = { ...info, answers: answersArray };
-      const url = `${API_BASE}/api/students`; // use single base
+      const url = `${API_BASE}/api/students`;
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`Submit failed (${res.status}) ${text}`);
+      }
+
       const data = await res.json();
       setSubmitted(data);
       setInfo(null);
     } catch (err) {
       console.error(err);
-      alert("Submission failed");
+      alert("Submission failed: " + (err.message || "unknown"));
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -60,7 +99,6 @@ const App = () => {
           <div className="text-lg font-semibold">
             Personality Assessment Test (PDC)
           </div>
-          {/* intentionally no Admin button — admin must open /admin manually */}
         </div>
       </header>
 
@@ -88,6 +126,19 @@ const App = () => {
           </>
         )}
       </main>
+
+      {/* NEW: blocking overlay while waiting / submitting */}
+      {submitting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded shadow text-center max-w-sm">
+            <div className="font-semibold mb-2">Submitting — please wait</div>
+            <div className="text-sm text-gray-600">
+              The server is busy; we'll submit as soon as it can accept
+              requests.
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
